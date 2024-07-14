@@ -1,0 +1,321 @@
+<!-- code by Tariqul Islam -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bricks Breaker</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #8860D0, #5AB9EA);
+            font-family: 'Arial', sans-serif;
+            color: white;
+        }
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #gameContainer {
+            width: 400px;
+            height: 400px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+        }
+        #scoreBoard {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 400px;
+            margin-bottom: 20px;
+        }
+        #newGameBtn {
+            padding: 12px 24px;
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            border: none;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        #newGameBtn::after {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 200%;
+            height: 200%;
+            background: linear-gradient(to right, rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0) 80%);
+            transform: rotate(-45deg);
+            transition: top 0.3s, left 0.3s;
+        }
+        #newGameBtn:hover::after {
+            top: -100%;
+            left: 100%;
+            transition: top 0.3s, left 0.3s;
+        }
+        #newGameBtn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+        }
+        #newGameBtn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #speedControl {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(45deg, #FF6B6B, #FF8E53);
+            outline: none;
+            opacity: 0.8;
+            transition: opacity .2s;
+        }
+        #speedControl:hover {
+            opacity: 1;
+        }
+        #speedControl::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4ECDC4;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0,0,0,0.2);
+        }
+        #speedControl::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #4ECDC4;
+            cursor: pointer;
+            box-shadow: 0 0 8px rgba(0,0,0,0.2);
+        }
+        #credit {
+            font-size: 14px;
+            text-align: center;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-wrapper">
+        <div id="gameContainer">
+            <canvas id="gameCanvas"></canvas>
+            <div id="scoreBoard">Score: 0</div>
+        </div>
+        <div id="controls">
+            <button id="newGameBtn">New Game</button>
+            <input type="range" id="speedControl" min="1" max="10" value="5">
+        </div>
+        <div id="credit"><a href="https://www.facebook.com/tariqulislaamrahat/" style="color: rgb(255, 255, 255); text-decoration: none;">Created by Tariqul Islam</a></div>
+    </div>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreBoard = document.getElementById('scoreBoard');
+        const speedControl = document.getElementById('speedControl');
+        const newGameBtn = document.getElementById('newGameBtn');
+
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+            '#F7DC6F', '#BB8FCE', '#7FB3D5', '#E59866', '#D7BDE2',
+            '#A3E4D7', '#F1948A'
+        ];
+
+        let ball, paddle, bricks, score, animationId;
+
+        const brickRowCount = 5;
+        const brickColumnCount = 8;
+        const brickWidth = 40;
+        const brickHeight = 20;
+        const brickPadding = 5;
+        const brickOffsetTop = 30;
+        const brickOffsetLeft = 30;
+
+        function initGame() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+
+            ball = {
+                x: canvas.width / 2,
+                y: canvas.height - 30,
+                dx: 2,
+                dy: -2,
+                radius: 7,
+                speed: 2
+            };
+
+            paddle = {
+                width: 75,
+                height: 10,
+                x: (canvas.width - 75) / 2
+            };
+
+            bricks = [];
+            for (let c = 0; c < brickColumnCount; c++) {
+                bricks[c] = [];
+                for (let r = 0; r < brickRowCount; r++) {
+                    bricks[c][r] = { 
+                        x: 0, 
+                        y: 0, 
+                        status: 1, 
+                        color: colors[(c + r) % colors.length]
+                    };
+                }
+            }
+
+            score = 0;
+            scoreBoard.textContent = `Score: ${score}`;
+            speedControl.value = 5;
+            updateBallSpeed();
+        }
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = '#FF0000';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPaddle() {
+            ctx.beginPath();
+            ctx.rect(paddle.x, canvas.height - paddle.height, paddle.width, paddle.height);
+            ctx.fillStyle = '#0095DD';
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBricks() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    if (bricks[c][r].status == 1) {
+                        const brickX = (c * (brickWidth + brickPadding)) + brickOffsetLeft;
+                        const brickY = (r * (brickHeight + brickPadding)) + brickOffsetTop;
+                        bricks[c][r].x = brickX;
+                        bricks[c][r].y = brickY;
+                        ctx.beginPath();
+                        ctx.rect(brickX, brickY, brickWidth, brickHeight);
+                        ctx.fillStyle = bricks[c][r].color;
+                        ctx.fill();
+                        ctx.closePath();
+                    }
+                }
+            }
+        }
+
+        function collisionDetection() {
+            for (let c = 0; c < brickColumnCount; c++) {
+                for (let r = 0; r < brickRowCount; r++) {
+                    const b = bricks[c][r];
+                    if (b.status == 1) {
+                        if (ball.x > b.x && ball.x < b.x + brickWidth && ball.y > b.y && ball.y < b.y + brickHeight) {
+                            ball.dy = -ball.dy;
+                            b.status = 0;
+                            score++;
+                            scoreBoard.textContent = `Score: ${score}`;
+                            if (score == brickRowCount * brickColumnCount) {
+                                alert('YOU WIN, CONGRATULATIONS!');
+                                document.location.reload();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateBallSpeed() {
+            const speed = speedControl.value / 2.5;
+            const magnitude = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
+            ball.dx = (ball.dx / magnitude) * speed;
+            ball.dy = (ball.dy / magnitude) * speed;
+            ball.speed = speed;
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBricks();
+            drawBall();
+            drawPaddle();
+            collisionDetection();
+
+            if (ball.x + ball.dx > canvas.width - ball.radius || ball.x + ball.dx < ball.radius) {
+                ball.dx = -ball.dx;
+            }
+            if (ball.y + ball.dy < ball.radius) {
+                ball.dy = -ball.dy;
+            } else if (ball.y + ball.dy > canvas.height - ball.radius) {
+                if (ball.x > paddle.x && ball.x < paddle.x + paddle.width) {
+                    ball.dy = -ball.dy;
+                    ball.dx = ball.dx + (Math.random() - 0.5) * 2;
+                } else {
+                    alert('GAME OVER');
+                    document.location.reload();
+                    return;
+                }
+            }
+
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            paddle.x = Math.max(0, Math.min(canvas.width - paddle.width, paddle.x));
+
+            animationId = requestAnimationFrame(draw);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const relativeX = e.clientX - rect.left;
+            if (relativeX > 0 && relativeX < canvas.width) {
+                paddle.x = relativeX - paddle.width / 2;
+            }
+        });
+
+        speedControl.addEventListener('input', updateBallSpeed);
+
+        newGameBtn.addEventListener('click', () => {
+            cancelAnimationFrame(animationId);
+            initGame();
+            draw();
+        });
+
+        window.addEventListener('resize', () => {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            initGame();
+        });
+
+        initGame();
+        draw();
+    </script>
+</body>
+</html>
