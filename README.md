@@ -4,10 +4,12 @@ This is a simple and engaging implementation of the classic bricks breaker game 
 
 You can play the live demo [here](https://tariqulislaam.github.io/bricks-breaker/).
 
+**This game had some issues with mobile phones. Please try using desktop devices for a better experience.**
+
 ## Features
 - Control the paddle using your mouse to keep the ball in play and break all the bricks.
 - Adjustable ball speed for varying difficulty levels.
-- Responsive design for both mobile and desktop devices.
+- Designed for both mobile and desktop devices.
 - Visually appealing UI with smooth animations and effects.
 
 ## How to Play
